@@ -71,20 +71,65 @@ class QuestionINF04(Base):
     correct_answer = Column(String(1), nullable=False)
     explanation = Column(Text, nullable=True)
 
+# Добавь эти модели в свой models.py
+
+# === ПРАКТИКА INF.02 ===
 class PracticeINF02(Base):
     __tablename__ = "practice_inf02"
     
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), unique=True, nullable=False, index=True)
-    date = Column(String(50), nullable=False)  # "2025 - Styczeń"
+    date = Column(String(50), nullable=False)
     year = Column(Integer, nullable=False, index=True)
-    type = Column(String(100), nullable=True)  # "PHP, Database"
-    arkusz_url = Column(Text, nullable=True)  # URL к PDF аркушу
-    pliki_url = Column(Text, nullable=True)  # URL к ZIP с файлами
-    rozwiazanie_url = Column(Text, nullable=True)  # URL к ZIP с решением
-    downloaded = Column(Integer, default=0)  # Счетчик скачиваний
+    type = Column(String(100), nullable=True)
+    arkusz_url = Column(Text, nullable=True)  # Путь к скачанному PDF
+    pliki_url = Column(Text, nullable=True)   # Путь к скачанному ZIP
+    rozwiazanie_url = Column(Text, nullable=True)  # Путь к скачанному ZIP
+    downloaded = Column(Integer, default=0)
 
-# Практика INF.03 / EE.09 / E.14
+# === ПРАКТИКА EE.08 ===
+class PracticeEE08(Base):
+    __tablename__ = "practice_ee08"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    date = Column(String(50), nullable=False)
+    year = Column(Integer, nullable=False, index=True)
+    type = Column(String(100), nullable=True)
+    arkusz_url = Column(Text, nullable=True)
+    pliki_url = Column(Text, nullable=True)
+    rozwiazanie_url = Column(Text, nullable=True)
+    downloaded = Column(Integer, default=0)
+
+# === ПРАКТИКА E.13 ===
+class PracticeE13(Base):
+    __tablename__ = "practice_e13"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    date = Column(String(50), nullable=False)
+    year = Column(Integer, nullable=False, index=True)
+    type = Column(String(100), nullable=True)
+    arkusz_url = Column(Text, nullable=True)
+    pliki_url = Column(Text, nullable=True)
+    rozwiazanie_url = Column(Text, nullable=True)
+    downloaded = Column(Integer, default=0)
+
+# === ПРАКТИКА E.12 ===
+class PracticeE12(Base):
+    __tablename__ = "practice_e12"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    date = Column(String(50), nullable=False)
+    year = Column(Integer, nullable=False, index=True)
+    type = Column(String(100), nullable=True)
+    arkusz_url = Column(Text, nullable=True)
+    pliki_url = Column(Text, nullable=True)
+    rozwiazanie_url = Column(Text, nullable=True)
+    downloaded = Column(Integer, default=0)
+
+# === ПРАКТИКА INF.03 ===
 class PracticeINF03(Base):
     __tablename__ = "practice_inf03"
     
@@ -98,7 +143,35 @@ class PracticeINF03(Base):
     rozwiazanie_url = Column(Text, nullable=True)
     downloaded = Column(Integer, default=0)
 
-# Практика INF.04
+# === ПРАКТИКА EE.09 ===
+class PracticeEE09(Base):
+    __tablename__ = "practice_ee09"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    date = Column(String(50), nullable=False)
+    year = Column(Integer, nullable=False, index=True)
+    type = Column(String(100), nullable=True)
+    arkusz_url = Column(Text, nullable=True)
+    pliki_url = Column(Text, nullable=True)
+    rozwiazanie_url = Column(Text, nullable=True)
+    downloaded = Column(Integer, default=0)
+
+# === ПРАКТИКА E.14 ===
+class PracticeE14(Base):
+    __tablename__ = "practice_e14"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    date = Column(String(50), nullable=False)
+    year = Column(Integer, nullable=False, index=True)
+    type = Column(String(100), nullable=True)
+    arkusz_url = Column(Text, nullable=True)
+    pliki_url = Column(Text, nullable=True)
+    rozwiazanie_url = Column(Text, nullable=True)
+    downloaded = Column(Integer, default=0)
+
+# === ПРАКТИКА INF.04 ===
 class PracticeINF04(Base):
     __tablename__ = "practice_inf04"
     

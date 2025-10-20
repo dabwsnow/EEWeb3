@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import sys
 import os
 import re
+from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal
@@ -10,23 +11,25 @@ from app import models
 from tqdm import tqdm
 import time
 
-# URL для каждого профиля
-PRACTICE_URLS = {
-    'inf02': 'https://ee-informatyk.pl/ee08-inf02/praktyka/',
-    'inf03': 'https://ee-informatyk.pl/inf03-ee09/praktyka/',
-    'inf04': 'https://ee-informatyk.pl/inf04/praktyka/',
-}
+# Базовая папка для скачанных файлов
+BASE_DOWNLOAD_DIR = Path("downloaded_practice")
 
-# Маппинг профилей на модели
-PRACTICE_MODELS = {
+# Маппинг профилей на модели (каждый профиль = своя таблица!)
+PROFILE_TO_MODEL = {
     'inf02': models.PracticeINF02,
+    'ee08': models.PracticeEE08,
+    'e12': models.PracticeE12,
+    'e13': models.PracticeE13,
     'inf03': models.PracticeINF03,
+    'ee09': models.PracticeEE09,
+    'e14': models.PracticeE14,
     'inf04': models.PracticeINF04,
 }
 
 def download_file(url, save_path):
-    """Скачивает файл"""
+    """Скачивает файл по URL"""
     try:
+        print(f"        🔽 Скачивание: {url}")
         response = requests.get(url, timeout=30, stream=True)
         response.raise_for_status()
         
@@ -36,22 +39,46 @@ def download_file(url, save_path):
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         
-        print(f"      ✅ Скачано: {save_path}")
-        return True
+        print(f"        ✅ Сохранено: {save_path}")
+        return str(save_path)
     except Exception as e:
-        print(f"      ❌ Ошибка: {e}")
-        return False
+        print(f"        ❌ Ошибка скачивания: {e}")
+        return None
 
-def parse_practice_page(base_url, profile_key):
-    """Парсит страницу с практическими экзаменами"""
-    print(f"\n🔍 Парсинг: {base_url}")
+def extract_year_from_code(code):
+    """Извлекает год из кода экзамена"""
+    try:
+        parts = code.split('-')
+        if len(parts) >= 3:
+            year_part = parts[2].split('.')[0]
+            parsed_year = int(year_part)
+            if parsed_year >= 14:
+                return 2000 + parsed_year
+            else:
+                return 2000 + parsed_year
+        return None
+    except Exception as e:
+        return None
+
+def get_profile_from_code(code):
+    """Определяет профиль из кода экзамена"""
+    # INF.02-01-24.05-SG → inf02
+    # EE.08-05-23.01-SG → ee08
+    code_prefix = code.split('-')[0].replace('.', '').lower()
+    return code_prefix
+
+def parse_and_download_inf04():
+    """Парсит и скачивает INF.04"""
+    base_url = 'https://ee-informatyk.pl/inf04/praktyka/'
+    print(f"\n🔍 Парсинг INF.04: {base_url}")
+    
+    all_practices = []
     
     try:
         response = requests.get(base_url, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         
-        # Находим все года
         year_select = soup.find('select', {'name': 'rok'})
         if not year_select:
             print("  ❌ Не найден селектор года")
@@ -60,124 +87,76 @@ def parse_practice_page(base_url, profile_key):
         years = [opt['value'] for opt in year_select.find_all('option') if opt['value'] != 'all']
         print(f"  📅 Найдено лет: {len(years)}")
         
-        all_practices = []
-        
         for year in years:
-            print(f"\n  📅 Парсинг года: {year}")
-            
-            # Запрос с фильтром по году
+            print(f"\n  📅 Год: {year}")
             year_url = f"{base_url}?rok={year}"
             year_response = requests.get(year_url, timeout=15)
             year_soup = BeautifulSoup(year_response.text, "html.parser")
             
-            # Находим все практические задания
             practice_items = year_soup.find_all('div', class_='practice-list--one')
             print(f"    📝 Найдено заданий: {len(practice_items)}")
             
             for item in practice_items:
                 try:
-                    # Дата (например "2025 - Styczeń")
                     date_elem = item.find('div', class_='practice-list--one--date')
                     date = date_elem.find('h3').text.strip() if date_elem else None
                     
-                    # Код (например "INF.03-12-25.01-SG")
                     code_elem = item.find('div', class_='practice-list--one--id')
                     code = code_elem.find('h3').text.strip() if code_elem else None
                     
                     if not date or not code:
                         continue
                     
-                    # ИСПРАВЛЕНО: Извлекаем год из кода
-                    # INF.03-12-25.01-SG → берем "25" → 2025
-                    # INF.04-03-23.06-SG → берем "23" → 2023
-                    try:
-                        parts = code.split('-')
-                        if len(parts) >= 3:
-                            # Берем третью часть и первые 2 символа
-                            year_part = parts[2].split('.')[0]  # "25" или "23"
-                            parsed_year = int(year_part)
+                    parsed_year = extract_year_from_code(code) or int(year)
+                    print(f"\n    📋 {code} ({date})")
+                    
+                    exam_dir = BASE_DOWNLOAD_DIR / "inf04" / code
+                    exam_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    links_ul = item.find('ul', class_='practice-list--one--links')
+                    arkusz_path = None
+                    rozwiazanie_path = None
+                    
+                    if links_ul:
+                        for link in links_ul.find_all('a'):
+                            href = link.get('href', '')
+                            text = link.text.strip()
                             
-                            # Преобразуем в полный год (14-99 → 2014-2099)
-                            if parsed_year >= 14:
-                                parsed_year = 2000 + parsed_year
-                            else:
-                                # Если меньше 14, это 2000-2013 (вряд ли будет)
-                                parsed_year = 2000 + parsed_year
-                        else:
-                            parsed_year = int(year)  # fallback
-                    except Exception as e:
-                        print(f"      ⚠️  Ошибка парсинга года из кода: {e}")
-                        parsed_year = int(year)  # fallback
-                    
-                    print(f"\n    📋 {code} ({date}) - Год: {parsed_year}")
-                    
-                    # Находим ссылки
-                    links = item.find('ul', class_='practice-list--one--links')
-                    if not links:
-                        continue
-                    
-                    arkusz_url = None
-                    pliki_url = None
-                    rozwiazanie_url = None
-                    
-                    for link in links.find_all('a'):
-                        href = link.get('href', '')
-                        text = link.text.strip()
-                        
-                        if 'Arkusz' in text and 'Rozwiązanie' not in text:
-                            # Ссылка на страницу с аркушем
-                            arkusz_page_url = f"https://ee-informatyk.pl{href}"
+                            if 'Arkusz' in text and 'PDF' in text:
+                                arkusz_page_url = f"https://ee-informatyk.pl{href}"
+                                try:
+                                    arkusz_response = requests.get(arkusz_page_url, timeout=15)
+                                    arkusz_soup = BeautifulSoup(arkusz_response.text, "html.parser")
+                                    pdf_link = arkusz_soup.find('a', href=re.compile(r'\.pdf$'))
+                                    if pdf_link:
+                                        pdf_url = f"https://ee-informatyk.pl{pdf_link['href']}"
+                                        arkusz_path = download_file(pdf_url, exam_dir / "arkusz.pdf")
+                                except Exception as e:
+                                    print(f"      ❌ Ошибка аркуша: {e}")
                             
-                            # Заходим на страницу аркуша и ищем PDF
-                            try:
-                                arkusz_response = requests.get(arkusz_page_url, timeout=15)
-                                arkusz_soup = BeautifulSoup(arkusz_response.text, "html.parser")
-                                
-                                # Ищем ссылку на PDF
-                                pdf_link = arkusz_soup.find('a', href=re.compile(r'\.pdf$'))
-                                if pdf_link:
-                                    arkusz_url = f"https://ee-informatyk.pl{pdf_link['href']}"
-                                    print(f"      📄 Arkusz PDF: {arkusz_url}")
-                            except Exception as e:
-                                print(f"      ❌ Ошибка парсинга аркуша: {e}")
-                        
-                        elif 'Pobierz Pliki' in text:
-                            pliki_url = f"https://ee-informatyk.pl{href}"
-                            print(f"      📦 Pliki: {pliki_url}")
-                        
-                        elif 'Pobierz Rozwiązanie' in text:
-                            rozwiazanie_url = f"https://ee-informatyk.pl{href}"
-                            print(f"      ✅ Rozwiązanie: {rozwiazanie_url}")
+                            elif 'Rozwiązanie' in text:
+                                rozwiazanie_url = f"https://ee-informatyk.pl{href}"
+                                rozwiazanie_path = rozwiazanie_url
+                                print(f"      📝 Rozwiązanie: {rozwiazanie_url}")
                     
-                    # Определяем тип (по иконкам)
-                    icons = item.find_all('h3', {'data-wenk': True})
-                    practice_type = []
-                    for icon in icons:
-                        wenk_text = icon.get('data-wenk', '').lower()
-                        if 'php' in wenk_text:
-                            practice_type.append('PHP')
-                        if 'baza danych' in wenk_text or 'database' in wenk_text:
-                            practice_type.append('Database')
-                    
-                    practice_data = {
+                    all_practices.append({
                         'code': code,
                         'date': date,
-                        'year': parsed_year,  # ← Используем parsed_year
-                        'type': ', '.join(practice_type) if practice_type else 'Standard',
-                        'arkusz_url': arkusz_url,
-                        'pliki_url': pliki_url,
-                        'rozwiazanie_url': rozwiazanie_url,
-                    }
+                        'year': parsed_year,
+                        'type': 'INF.04',
+                        'profile': 'inf04',
+                        'arkusz_path': arkusz_path,
+                        'pliki_path': None,
+                        'rozwiazanie_path': rozwiazanie_path,
+                    })
                     
-                    all_practices.append(practice_data)
+                    time.sleep(0.5)
                 
                 except Exception as e:
-                    print(f"    ❌ Ошибка обработки элемента: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    print(f"    ❌ Ошибка: {e}")
                     continue
             
-            time.sleep(1)  # Задержка между годами
+            time.sleep(1)
         
         return all_practices
     
@@ -186,22 +165,130 @@ def parse_practice_page(base_url, profile_key):
         import traceback
         traceback.print_exc()
         return []
+
+def parse_and_download_multiprofile(base_url, profiles_list, group_name):
+    """Парсит и скачивает группу профилей (INF.02/EE.08/E.13/E.12 или INF.03/EE.09/E.14)"""
+    print(f"\n🔍 Парсинг группы {group_name}: {base_url}")
     
-def scrape_profile_practice(profile_key, base_url):
-    """Парсит практические задания для профиля"""
-    model = PRACTICE_MODELS.get(profile_key)
+    all_practices = []
+    session = requests.Session()
     
-    if not model:
-        print(f"❌ Неизвестный профиль: {profile_key}")
+    try:
+        response = session.get(base_url, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        year_select = soup.find('select', {'name': 'rok'})
+        if not year_select:
+            print("  ❌ Не найден селектор года")
+            return []
+        
+        years = [opt['value'] for opt in year_select.find_all('option') if opt['value'] != 'all']
+        print(f"  📅 Найдено лет: {len(years)}")
+        
+        for profile in profiles_list:
+            print(f"\n  🔄 Профиль: {profile.upper()}")
+            
+            for year in years:
+                print(f"    📅 Год: {year}")
+                
+                params = {
+                    'rok': year,
+                    'egzamin': profile
+                }
+                
+                year_response = session.get(base_url, params=params, timeout=15)
+                year_soup = BeautifulSoup(year_response.text, "html.parser")
+                
+                practice_items = year_soup.find_all('div', class_='practice-list--one')
+                print(f"      📝 Заданий: {len(practice_items)}")
+                
+                for item in practice_items:
+                    try:
+                        date_elem = item.find('div', class_='practice-list--one--date')
+                        date = date_elem.find('h3').text.strip() if date_elem else None
+                        
+                        code_elem = item.find('div', class_='practice-list--one--id')
+                        code = code_elem.find('h3').text.strip() if code_elem else None
+                        
+                        if not date or not code:
+                            continue
+                        
+                        code_profile = get_profile_from_code(code)
+                        if code_profile != profile:
+                            continue
+                        
+                        parsed_year = extract_year_from_code(code) or int(year)
+                        print(f"\n      📋 {code} ({date})")
+                        
+                        exam_dir = BASE_DOWNLOAD_DIR / profile / code
+                        exam_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        links_ul = item.find('ul', class_='practice-list--one--links')
+                        arkusz_path = None
+                        pliki_path = None
+                        rozwiazanie_path = None
+                        
+                        if links_ul:
+                            for link in links_ul.find_all('a'):
+                                href = link.get('href', '')
+                                text = link.text.strip()
+                                
+                                if 'Arkusz' in text:
+                                    arkusz_page_url = f"https://ee-informatyk.pl{href}"
+                                    try:
+                                        arkusz_response = session.get(arkusz_page_url, timeout=15)
+                                        arkusz_soup = BeautifulSoup(arkusz_response.text, "html.parser")
+                                        pdf_link = arkusz_soup.find('a', href=re.compile(r'\.pdf$'))
+                                        if pdf_link:
+                                            pdf_url = f"https://ee-informatyk.pl{pdf_link['href']}"
+                                            arkusz_path = download_file(pdf_url, exam_dir / "arkusz.pdf")
+                                    except Exception as e:
+                                        print(f"        ❌ Ошибка аркуша: {e}")
+                                
+                                elif 'Pobierz Pliki' in text or ('Pliki' in text and '.zip' in href.lower()):
+                                    pliki_url = f"https://ee-informatyk.pl{href}"
+                                    pliki_path = download_file(pliki_url, exam_dir / "pliki.zip")
+                                
+                                elif 'Pobierz Rozwiązanie' in text or ('Rozwiązanie' in text and '.zip' in href.lower()):
+                                    rozwiazanie_url = f"https://ee-informatyk.pl{href}"
+                                    rozwiazanie_path = download_file(rozwiazanie_url, exam_dir / "rozwiazanie.zip")
+                        
+                        all_practices.append({
+                            'code': code,
+                            'date': date,
+                            'year': parsed_year,
+                            'type': profile.upper(),
+                            'profile': profile,
+                            'arkusz_path': arkusz_path,
+                            'pliki_path': pliki_path,
+                            'rozwiazanie_path': rozwiazanie_path,
+                        })
+                        
+                        time.sleep(0.5)
+                    
+                    except Exception as e:
+                        print(f"      ❌ Ошибка: {e}")
+                        continue
+                
+                time.sleep(1)
+            
+            time.sleep(2)
+        
+        return all_practices
+    
+    except Exception as e:
+        print(f"  ❌ Ошибка: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+def save_to_database(practices_data):
+    """Сохраняет данные в базу (каждый профиль в свою таблицу!)"""
+    
+    if not practices_data:
+        print("  ⚠️ Нет данных для сохранения")
         return
-    
-    print(f"\n{'='*60}")
-    print(f"📚 Практика {profile_key.upper()}")
-    print(f"{'='*60}")
-    
-    practices_data = parse_practice_page(base_url, profile_key)
-    
-    print(f"\n📊 Всего найдено: {len(practices_data)}")
     
     db = SessionLocal()
     added = 0
@@ -209,6 +296,13 @@ def scrape_profile_practice(profile_key, base_url):
     
     try:
         for p_data in tqdm(practices_data, desc="  💾 Сохранение"):
+            profile = p_data.get('profile')
+            model = PROFILE_TO_MODEL.get(profile)
+            
+            if not model:
+                print(f"      ⚠️ Неизвестный профиль: {profile}")
+                continue
+            
             existing = db.query(model).filter(
                 model.code == p_data['code']
             ).first()
@@ -222,10 +316,10 @@ def scrape_profile_practice(profile_key, base_url):
                 date=p_data['date'],
                 year=int(p_data['year']),
                 type=p_data['type'],
-                arkusz_url=p_data['arkusz_url'],
-                pliki_url=p_data['pliki_url'],
-                rozwiazanie_url=p_data['rozwiazanie_url'],
-                downloaded=0
+                arkusz_url=p_data.get('arkusz_path'),
+                pliki_url=p_data.get('pliki_path'),
+                rozwiazanie_url=p_data.get('rozwiazanie_path'),
+                downloaded=1 if p_data.get('arkusz_path') else 0
             )
             
             db.add(practice)
@@ -234,11 +328,11 @@ def scrape_profile_practice(profile_key, base_url):
         db.commit()
         
         print(f"\n✅ Результат:")
-        print(f"   📝 Всего добавлено: {added}")
-        print(f"   ⏭️  Пропущено: {skipped}\n")
+        print(f"   📝 Добавлено: {added}")
+        print(f"   ⏭️  Пропущено: {skipped}")
     
     except Exception as e:
-        print(f"\n❌ Ошибка: {e}")
+        print(f"\n❌ Ошибка сохранения: {e}")
         import traceback
         traceback.print_exc()
         db.rollback()
@@ -246,18 +340,62 @@ def scrape_profile_practice(profile_key, base_url):
         db.close()
 
 def main():
-    print("\n🚀 СТАРТ ПАРСЕРА ПРАКТИКИ\n")
+    print("\n🚀 СТАРТ ПАРСЕРА И ЗАГРУЗЧИКА ПРАКТИКИ")
+    print(f"📁 Файлы → {BASE_DOWNLOAD_DIR.absolute()}\n")
     
-    # Парсим все профили
-    for profile_key, base_url in PRACTICE_URLS.items():
-        try:
-            scrape_profile_practice(profile_key, base_url)
-            time.sleep(2)
-        except Exception as e:
-            print(f"❌ {profile_key}: {e}")
-            continue
+    BASE_DOWNLOAD_DIR.mkdir(exist_ok=True)
     
-    print("🎉 ГОТОВО!\n")
+    all_data = []
+    
+    # 1. INF.04
+    try:
+        print(f"\n{'='*60}")
+        print(f"📚 INF.04")
+        print(f"{'='*60}")
+        practices = parse_and_download_inf04()
+        all_data.extend(practices)
+        time.sleep(2)
+    except Exception as e:
+        print(f"❌ INF.04: {e}")
+    
+    # 2. INF.02 / EE.08 / E.13 / E.12
+    try:
+        print(f"\n{'='*60}")
+        print(f"📚 INF.02 / EE.08 / E.13 / E.12")
+        print(f"{'='*60}")
+        practices = parse_and_download_multiprofile(
+            'https://ee-informatyk.pl/inf02-ee08/praktyka/',
+            ['inf02', 'ee08', 'e13', 'e12'],
+            'INF02-GROUP'
+        )
+        all_data.extend(practices)
+        time.sleep(2)
+    except Exception as e:
+        print(f"❌ INF02 группа: {e}")
+    
+    # 3. INF.03 / EE.09 / E.14
+    try:
+        print(f"\n{'='*60}")
+        print(f"📚 INF.03 / EE.09 / E.14")
+        print(f"{'='*60}")
+        practices = parse_and_download_multiprofile(
+            'https://ee-informatyk.pl/inf03-ee09/praktyka/',
+            ['inf03', 'ee09', 'e14'],
+            'INF03-GROUP'
+        )
+        all_data.extend(practices)
+        time.sleep(2)
+    except Exception as e:
+        print(f"❌ INF03 группа: {e}")
+    
+    # Сохраняем все в БД
+    if all_data:
+        print(f"\n{'='*60}")
+        print(f"💾 СОХРАНЕНИЕ В БАЗУ ДАННЫХ")
+        print(f"{'='*60}")
+        save_to_database(all_data)
+    
+    print("\n🎉 ГОТОВО! Все файлы скачаны и сохранены\n")
 
 if __name__ == "__main__":
     main()
