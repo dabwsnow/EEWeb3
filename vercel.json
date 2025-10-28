@@ -1,14 +1,8 @@
 {
-  "functions": {
-    "app/main.py": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  },
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "app/main.py"
+      "dest": "/api/main.py"
     }
   ]
 }
