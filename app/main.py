@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
+from pathlib import Path
 from sqlalchemy import or_
 import random
 import os
@@ -14,13 +15,16 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="WEB3Informatyk API")
 
-# Статические файлы (изображения)
+PRACTICE_DIR = Path("downloaded_practice")
+if PRACTICE_DIR.exists():
+    app.mount("/practice", StaticFiles(directory=str(PRACTICE_DIR)), name="practice")
+
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["https://web-informatyk.lol", "https://www.web-informatyk.lol"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,6 +38,93 @@ CATEGORY_MODELS = {
     "INF.03": models.QuestionINF03,
     "INF.04": models.QuestionINF04,
 }
+
+PRACTICE_MODELS = {
+    'inf02': models.PracticeINF02,
+    'ee08': models.PracticeEE08,
+    'e12': models.PracticeE12,
+    'e13': models.PracticeE13,
+    'inf03': models.PracticeINF03,
+    'ee09': models.PracticeEE09,
+    'e14': models.PracticeE14,
+    'inf04': models.PracticeINF04,
+}
+
+PRACTICE_PROFILES_INFO = {
+    'inf02': {
+        'id': 'inf02',
+        'name': 'INF.02',
+        'title': 'Administracja systemami komputerowymi',
+        'icon': '🖥️',
+        'color': '#667eea',
+        'category': 'Technik informatyk',
+        'description': 'Administracja i eksploatacja systemów komputerowych, urządzeń peryferyjnych i lokalnych sieci komputerowych'
+    },
+    'ee08': {
+        'id': 'ee08',
+        'name': 'EE.08',
+        'title': 'Montaż i eksploatacja systemów komputerowych',
+        'icon': '🔧',
+        'color': '#f59e0b',
+        'category': 'Technik informatyk (stara podstawa)',
+        'description': 'Montaż, uruchamianie i konserwacja komputerów oraz urządzeń peryferyjnych'
+    },
+    'e12': {
+        'id': 'e12',
+        'name': 'E.12',
+        'title': 'Montaż i eksploatacja komputerów osobistych',
+        'icon': '💻',
+        'color': '#06b6d4',
+        'category': 'Technik informatyk (bardzo stara podstawa)',
+        'description': 'Montaż komputerów osobistych oraz instalacja systemów i programów użytkowych'
+    },
+    'e13': {
+        'id': 'e13',
+        'name': 'E.13',
+        'title': 'Projektowanie lokalnych sieci komputerowych',
+        'icon': '🌐',
+        'color': '#8b5cf6',
+        'category': 'Technik informatyk (bardzo stara podstawa)',
+        'description': 'Projektowanie lokalnych sieci komputerowych i administrowanie sieciami'
+    },
+    'inf03': {
+        'id': 'inf03',
+        'name': 'INF.03',
+        'title': 'Tworzenie i administrowanie stronami',
+        'icon': '💾',
+        'color': '#10b981',
+        'category': 'Technik programista',
+        'description': 'Tworzenie i administrowanie stronami i aplikacjami internetowymi oraz bazami danych'
+    },
+    'ee09': {
+        'id': 'ee09',
+        'name': 'EE.09',
+        'title': 'Programowanie aplikacji internetowych',
+        'icon': '🌍',
+        'color': '#ec4899',
+        'category': 'Technik programista (stara podstawa)',
+        'description': 'Tworzenie aplikacji internetowych i baz danych oraz administrowanie bazami'
+    },
+    'e14': {
+        'id': 'e14',
+        'name': 'E.14',
+        'title': 'Tworzenie aplikacji internetowych i baz danych',
+        'icon': '📊',
+        'color': '#f43f5e',
+        'category': 'Technik programista (bardzo stara podstawa)',
+        'description': 'Tworzenie aplikacji internetowych, baz danych i administrowanie bazami danych'
+    },
+    'inf04': {
+        'id': 'inf04',
+        'name': 'INF.04',
+        'title': 'Projektowanie, programowanie i testowanie aplikacji',
+        'icon': '📱',
+        'color': '#a855f7',
+        'category': 'Technik programista',
+        'description': 'Projektowanie, programowanie i testowanie aplikacji desktopowych i mobilnych'
+    }
+}
+
 
 # Информация о категориях
 CATEGORIES_INFO = [
@@ -245,15 +336,16 @@ def submit_test(submission: schemas.TestSubmit, db: Session = Depends(get_db)):
 
 @app.get("/api/search")
 def search(q: str, db: Session = Depends(get_db)):
-    """Глобальный поиск по вопросам и тестам"""
+    """Глобальный поиск по вопросам, тестам и практикам"""
     
     if not q or len(q.strip()) < 2:
-        return {"questions": [], "tests": []}
+        return {"questions": [], "tests": [], "practices": []}
     
-    search_query = q.strip()  # ← Сохраняем оригинальный запрос
+    search_query = q.strip()
     query_text = f"%{search_query}%"
+    query_lower = search_query.lower()
     
-    # Информация о категориях
+    # Информация о категориях для вопросов
     category_map = {
         "E.12": {"name": "E.12", "icon": "🔌", "key": "e12", "model": models.QuestionE12},
         "E.13": {"name": "E.13", "icon": "⚡", "key": "e13", "model": models.QuestionE13},
@@ -262,14 +354,13 @@ def search(q: str, db: Session = Depends(get_db)):
         "INF.04": {"name": "INF.04", "icon": "📱", "key": "inf04", "model": models.QuestionINF04},
     }
     
+    # === ПОИСК ПО ВОПРОСАМ ===
     all_questions = []
     
-    # Ищем в каждой таблице
     for cat_code, cat_info in category_map.items():
         model = cat_info["model"]
         
         try:
-            # Поиск по вопросам и ответам
             questions = db.query(model).filter(
                 or_(
                     model.question.ilike(query_text),
@@ -280,8 +371,7 @@ def search(q: str, db: Session = Depends(get_db)):
                 )
             ).limit(5).all()
             
-            for question_obj in questions:  # ← ИСПРАВЛЕНО: question_obj вместо q
-                # Обрезаем длинный текст
+            for question_obj in questions:
                 question_text = question_obj.question
                 if len(question_text) > 100:
                     question_text = question_text[:100] + "..."
@@ -297,17 +387,14 @@ def search(q: str, db: Session = Depends(get_db)):
             print(f"Ошибка поиска в {cat_code}: {e}")
             continue
     
-    # Ограничиваем общее количество до 10
     all_questions = all_questions[:10]
     
-    # Тесты
+    # === ПОИСК ПО ТЕСТАМ ===
     tests = []
-    query_lower = search_query.lower()  # ← ИСПРАВЛЕНО: используем search_query
     
     for cat_code, cat_info in category_map.items():
         model = cat_info["model"]
         
-        # Проверяем соответствие поисковому запросу
         if (query_lower in cat_info["name"].lower() or 
             query_lower in cat_info["key"].lower() or
             "test" in query_lower or
@@ -362,12 +449,216 @@ def search(q: str, db: Session = Depends(get_db)):
                 print(f"Ошибка подсчета в {cat_code}: {e}")
                 continue
     
-    # Ограничиваем тесты
     tests = tests[:8]
+    
+    # === ПОИСК ПО ПРАКТИКАМ ===
+    practices = []
+    
+    for profile_id, profile_info in PRACTICE_PROFILES_INFO.items():
+        # Проверяем совпадение с названием профиля, категорией или описанием
+        if (query_lower in profile_info['name'].lower() or
+            query_lower in profile_info['title'].lower() or
+            query_lower in profile_info['category'].lower() or
+            query_lower in profile_info['description'].lower() or
+            query_lower in profile_id.lower() or
+            "praktyka" in query_lower or
+            "arkusz" in query_lower):
+            
+            model = PRACTICE_MODELS.get(profile_id)
+            if not model:
+                continue
+            
+            try:
+                # Ищем архивы по коду или дате
+                archives = db.query(model).filter(
+                    or_(
+                        model.code.ilike(query_text),
+                        model.date.ilike(query_text)
+                    )
+                ).limit(3).all()
+                
+                # Если нашли конкретные архивы - добавляем их
+                if archives:
+                    for archive in archives:
+                        practices.append({
+                            "id": f"{profile_id}-{archive.id}",
+                            "type": "archive",
+                            "profile_id": profile_id,
+                            "archive_id": archive.id,
+                            "title": archive.code,
+                            "subtitle": archive.date,
+                            "category": profile_info['name'],
+                            "icon": profile_info['icon'],
+                            "color": profile_info['color']
+                        })
+                else:
+                    # Если не нашли конкретные архивы - добавляем сам профиль
+                    archives_count = db.query(model).count()
+                    practices.append({
+                        "id": profile_id,
+                        "type": "profile",
+                        "profile_id": profile_id,
+                        "title": profile_info['name'],
+                        "subtitle": profile_info['title'],
+                        "category": profile_info['category'],
+                        "icon": profile_info['icon'],
+                        "color": profile_info['color'],
+                        "archives_count": archives_count
+                    })
+            
+            except Exception as e:
+                print(f"Ошибка поиска практик в {profile_id}: {e}")
+                continue
+    
+    practices = practices[:8]
     
     return {
         "questions": all_questions,
-        "tests": tests
+        "tests": tests,
+        "practices": practices
+    }
+
+@app.get("/api/practice/profiles")
+def get_practice_profiles(db: Session = Depends(get_db)):
+    """Получить список всех профилей практики с количеством архивов"""
+    
+    result = []
+    
+    for profile_id, profile_info in PRACTICE_PROFILES_INFO.items():
+        model = PRACTICE_MODELS.get(profile_id)
+        
+        if model:
+            # Считаем количество архивов и скачиваний
+            archives_count = db.query(model).count()
+            total_downloads = db.query(model).count() * 100  # Пример
+            
+            result.append({
+                **profile_info,
+                'archives_count': archives_count,
+                'total_downloads': total_downloads
+            })
+    
+    return {"profiles": result}
+
+@app.get("/api/practice/profile/{profile_id}")
+def get_practice_profile(profile_id: str, db: Session = Depends(get_db)):
+    """Получить детали профиля с архивами"""
+    
+    if profile_id not in PRACTICE_PROFILES_INFO:
+        raise HTTPException(status_code=404, detail="Profil nie znaleziony")
+    
+    profile_info = PRACTICE_PROFILES_INFO[profile_id]
+    model = PRACTICE_MODELS.get(profile_id)
+    
+    if not model:
+        raise HTTPException(status_code=404, detail="Model nie znaleziony")
+    
+    # Получаем все архивы для этого профиля
+    archives = db.query(model).order_by(model.year.desc(), model.date.desc()).all()
+    
+    # Конвертируем пути файлов в URL
+    def file_to_url(file_path):
+        if not file_path:
+            return None
+        # Если путь начинается с downloaded_practice, добавляем /static/
+        if file_path.startswith('downloaded_practice'):
+            return f"/static/{file_path}"
+        # Если уже есть /static/, возвращаем как есть
+        if file_path.startswith('/static/'):
+            return file_path
+        return file_path
+    
+    # Форматируем архивы
+    formatted_archives = []
+    for archive in archives:
+        # Базовые файлы
+        files = {
+            'arkusz': file_to_url(archive.arkusz_url),
+            'pliki': file_to_url(getattr(archive, 'pliki_url', None)),
+        }
+        
+        # Для INF.04 - специальные поля
+        if profile_id == 'inf04':
+            files.update({
+                'klucz_odpowiedzi': file_to_url(getattr(archive, 'klucz_odpowiedzi_url', None)),
+                'materialy': file_to_url(getattr(archive, 'materialy_url', None)),
+                'rozwiazanie_cs': file_to_url(getattr(archive, 'rozwiazanie_cs_url', None)),
+                'rozwiazanie_cpp': file_to_url(getattr(archive, 'rozwiazanie_cpp_url', None)),
+                'rozwiazanie_java': file_to_url(getattr(archive, 'rozwiazanie_java_url', None)),
+                'rozwiazanie_python': file_to_url(getattr(archive, 'rozwiazanie_python_url', None)),
+            })
+        else:
+            # Для остальных профилей - обычное rozwiazanie
+            files['rozwiazanie'] = file_to_url(getattr(archive, 'rozwiazanie_url', None))
+        
+        formatted_archives.append({
+            'id': archive.id,
+            'code': archive.code,
+            'date': archive.date,
+            'year': archive.year,
+            'type': 'Egzamin główny',
+            'downloaded': 1000 + archive.id * 100,  # Пример счетчика
+            'files': files
+        })
+    
+    return {
+        **profile_info,
+        'archives': formatted_archives,
+        'archives_count': len(formatted_archives),
+        'total_downloads': sum(a['downloaded'] for a in formatted_archives)
+    }
+
+@app.get("/api/practice/archive/{profile_id}/{archive_id}")
+def get_practice_archive(profile_id: str, archive_id: int, db: Session = Depends(get_db)):
+    """Получить детали конкретного архива"""
+    
+    if profile_id not in PRACTICE_MODELS:
+        raise HTTPException(status_code=404, detail="Profil nie znaleziony")
+    
+    model = PRACTICE_MODELS[profile_id]
+    archive = db.query(model).filter(model.id == archive_id).first()
+    
+    if not archive:
+        raise HTTPException(status_code=404, detail="Arkusz nie znaleziony")
+    
+    # Конвертируем пути файлов в URL
+    def file_to_url(file_path):
+        if not file_path:
+            return None
+        if file_path.startswith('downloaded_practice'):
+            return f"/static/{file_path}"
+        if file_path.startswith('/static/'):
+            return file_path
+        return file_path
+    
+    # Форматируем файлы
+    files = {
+        'arkusz': file_to_url(archive.arkusz_url),
+        'pliki': file_to_url(archive.pliki_url),
+        'rozwiazanie': file_to_url(archive.rozwiazanie_url),
+    }
+    
+    # Для INF.04 добавляем дополнительные поля
+    if profile_id == 'inf04':
+        files.update({
+            'klucz_odpowiedzi': file_to_url(getattr(archive, 'klucz_odpowiedzi_url', None)),
+            'materialy': file_to_url(getattr(archive, 'materialy_url', None)),
+            'rozwiazanie_cs': file_to_url(getattr(archive, 'rozwiazanie_cs_url', None)),
+            'rozwiazanie_cpp': file_to_url(getattr(archive, 'rozwiazanie_cpp_url', None)),
+            'rozwiazanie_java': file_to_url(getattr(archive, 'rozwiazanie_java_url', None)),
+            'rozwiazanie_python': file_to_url(getattr(archive, 'rozwiazanie_python_url', None)),
+        })
+    
+    return {
+        'id': archive.id,
+        'code': archive.code,
+        'date': archive.date,
+        'year': archive.year,
+        'type': archive.type,
+        'profile': profile_id,
+        'profile_info': PRACTICE_PROFILES_INFO[profile_id],
+        'files': files,
+        'downloaded': 1000 + archive.id * 100
     }
 
 if __name__ == "__main__":
