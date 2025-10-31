@@ -1,7 +1,0 @@
-name = "eeweb3"
-compatibility_date = "2025-10-28"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "web3informatyk"
-database_id = "40af2846-f38b-4ac6-b290-46710d52f9f1"

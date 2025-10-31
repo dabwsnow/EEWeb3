@@ -1,0 +1,245 @@
+{
+  "categories_info": [
+    {
+      "code": "E.12",
+      "name": "E.12",
+      "icon": "🔌"
+    },
+    {
+      "code": "E.13",
+      "name": "E.13",
+      "icon": "⚡"
+    },
+    {
+      "code": "INF.02",
+      "name": "INF.02 / EE.08",
+      "icon": "🖥️"
+    },
+    {
+      "code": "INF.03",
+      "name": "INF.03 / EE.09 / E.14",
+      "icon": "💾"
+    },
+    {
+      "code": "INF.04",
+      "name": "INF.04",
+      "icon": "📱"
+    }
+  ],
+  "test_configs": {
+    "e12-40": {
+      "name": "E.12",
+      "title": "Test 40 pytań",
+      "icon": "🔌",
+      "count": 40,
+      "base": "E12"
+    },
+    "e12-20": {
+      "name": "E.12",
+      "title": "Test 20 pytań",
+      "icon": "🔌",
+      "count": 20,
+      "base": "E12"
+    },
+    "e12-1": {
+      "name": "E.12",
+      "title": "Losowe pytanie",
+      "icon": "🔌",
+      "count": 1,
+      "base": "E12"
+    },
+    "e12-baza": {
+      "name": "E.12",
+      "title": "Baza pytań",
+      "icon": "🔌",
+      "count": null,
+      "base": "E12"
+    },
+    "e13-40": {
+      "name": "E.13",
+      "title": "Test 40 pytań",
+      "icon": "⚡",
+      "count": 40,
+      "base": "E13"
+    },
+    "e13-20": {
+      "name": "E.13",
+      "title": "Test 20 pytań",
+      "icon": "⚡",
+      "count": 20,
+      "base": "E13"
+    },
+    "e13-1": {
+      "name": "E.13",
+      "title": "Losowe pytanie",
+      "icon": "⚡",
+      "count": 1,
+      "base": "E13"
+    },
+    "e13-baza": {
+      "name": "E.13",
+      "title": "Baza pytań",
+      "icon": "⚡",
+      "count": null,
+      "base": "E13"
+    },
+    "inf02-40": {
+      "name": "INF.02 / EE.08",
+      "title": "Test 40 pytań",
+      "icon": "🖥️",
+      "count": 40,
+      "base": "INF02"
+    },
+    "inf02-20": {
+      "name": "INF.02 / EE.08",
+      "title": "Test 20 pytań",
+      "icon": "🖥️",
+      "count": 20,
+      "base": "INF02"
+    },
+    "inf02-1": {
+      "name": "INF.02 / EE.08",
+      "title": "Losowe pytanie",
+      "icon": "🖥️",
+      "count": 1,
+      "base": "INF02"
+    },
+    "inf02-baza": {
+      "name": "INF.02 / EE.08",
+      "title": "Baza pytań",
+      "icon": "🖥️",
+      "count": null,
+      "base": "INF02"
+    },
+    "inf03-40": {
+      "name": "INF.03 / EE.09",
+      "title": "Test 40 pytań",
+      "icon": "💾",
+      "count": 40,
+      "base": "INF03"
+    },
+    "inf03-20": {
+      "name": "INF.03 / EE.09",
+      "title": "Test 20 pytań",
+      "icon": "💾",
+      "count": 20,
+      "base": "INF03"
+    },
+    "inf03-1": {
+      "name": "INF.03 / EE.09",
+      "title": "Losowe pytanie",
+      "icon": "💾",
+      "count": 1,
+      "base": "INF03"
+    },
+    "inf03-baza": {
+      "name": "INF.03 / EE.09",
+      "title": "Baza pytań",
+      "icon": "💾",
+      "count": null,
+      "base": "INF03"
+    },
+    "inf04-40": {
+      "name": "INF.04",
+      "title": "Test 40 pytań",
+      "icon": "📱",
+      "count": 40,
+      "base": "INF04"
+    },
+    "inf04-20": {
+      "name": "INF.04",
+      "title": "Test 20 pytań",
+      "icon": "📱",
+      "count": 20,
+      "base": "INF04"
+    },
+    "inf04-1": {
+      "name": "INF.04",
+      "title": "Losowe pytanie",
+      "icon": "📱",
+      "count": 1,
+      "base": "INF04"
+    },
+    "inf04-baza": {
+      "name": "INF.04",
+      "title": "Baza pytań",
+      "icon": "📱",
+      "count": null,
+      "base": "INF04"
+    }
+  },
+  "practice_profiles_info": {
+    "inf02": {
+      "id": "inf02",
+      "name": "INF.02",
+      "title": "Administracja systemami komputerowymi",
+      "icon": "🖥️",
+      "color": "#667eea",
+      "category": "Technik informatyk",
+      "description": "Administracja i eksploatacja systemów komputerowych, urządzeń peryferyjnych i lokalnych sieci komputerowych"
+    },
+    "ee08": {
+      "id": "ee08",
+      "name": "EE.08",
+      "title": "Montaż i eksploatacja systemów komputerowych",
+      "icon": "🔧",
+      "color": "#f59e0b",
+      "category": "Technik informatyk (stara podstawa)",
+      "description": "Montaż, uruchamianie i konserwacja komputerów oraz urządzeń peryferyjnych"
+    },
+    "e12": {
+      "id": "e12",
+      "name": "E.12",
+      "title": "Montaż i eksploatacja komputerów osobistych",
+      "icon": "💻",
+      "color": "#06b6d4",
+      "category": "Technik informatyk (bardzo stara podstawa)",
+      "description": "Montaż komputerów osobistych oraz instalacja systemów i programów użytkowych"
+    },
+    "e13": {
+      "id": "e13",
+      "name": "E.13",
+      "title": "Projektowanie lokalnych sieci komputerowych",
+      "icon": "🌐",
+      "color": "#8b5cf6",
+      "category": "Technik informatyk (bardzo stara podstawa)",
+      "description": "Projektowanie lokalnych sieci komputerowych i administrowanie sieciami"
+    },
+    "inf03": {
+      "id": "inf03",
+      "name": "INF.03",
+      "title": "Tworzenie i administrowanie stronami",
+      "icon": "💾",
+      "color": "#10b981",
+      "category": "Technik programista",
+      "description": "Tworzenie i administrowanie stronami i aplikacjami internetowymi oraz bazami danych"
+    },
+    "ee09": {
+      "id": "ee09",
+      "name": "EE.09",
+      "title": "Programowanie aplikacji internetowych",
+      "icon": "🌍",
+      "color": "#ec4899",
+      "category": "Technik programista (stara podstawa)",
+      "description": "Tworzenie aplikacji internetowych i baz danych oraz administrowanie bazami"
+    },
+    "e14": {
+      "id": "e14",
+      "name": "E.14",
+      "title": "Tworzenie aplikacji internetowych i baz danych",
+      "icon": "📊",
+      "color": "#f43f5e",
+      "category": "Technik programista (bardzo stara podstawa)",
+      "description": "Tworzenie aplikacji internetowych, baz danych i administrowanie bazami danych"
+    },
+    "inf04": {
+      "id": "inf04",
+      "name": "INF.04",
+      "title": "Projektowanie, programowanie i testowanie aplikacji",
+      "icon": "📱",
+      "color": "#a855f7",
+      "category": "Technik programista",
+      "description": "Projektowanie, programowanie i testowanie aplikacji desktopowych i mobilnych"
+    }
+  }
+}
