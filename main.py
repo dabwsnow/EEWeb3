@@ -345,7 +345,35 @@ def search(request: Request, q: str, db: Session = Depends(get_db)):
         tests = tests[:8]
         
         practices = []
-        practice_keywords = ["praktyka", "arkusz"]
+        practice_keywords = ["praktyka", "arkusz", "egzamin"]
+        
+        for profile_id, profile_info in CONFIG["practice_profiles_info"].items():
+            model = PRACTICE_MODELS.get(profile_id)
+            if not model:
+                continue
+            
+            try:
+                archives = db.query(model).filter(
+                    or_(
+                        model.code.ilike(query_text),
+                        model.date.ilike(query_text)
+                    )
+                ).limit(5).all()
+                
+                for archive in archives:
+                    practices.append({
+                        "id": f"{profile_id}-{archive.id}",
+                        "type": "archive",
+                        "profile_id": profile_id,
+                        "archive_id": archive.id,
+                        "title": archive.code,
+                        "subtitle": archive.date,
+                        "category": profile_info['name'],
+                        "icon": profile_info['icon'],
+                        "color": profile_info['color']
+                    })
+            except Exception:
+                continue
         
         for profile_id, profile_info in CONFIG["practice_profiles_info"].items():
             should_include = (
@@ -363,27 +391,9 @@ def search(request: Request, q: str, db: Session = Depends(get_db)):
                     continue
                 
                 try:
-                    archives = db.query(model).filter(
-                        or_(
-                            model.code.ilike(query_text),
-                            model.date.ilike(query_text)
-                        )
-                    ).limit(3).all()
+                    already_added = any(p.get('profile_id') == profile_id for p in practices)
                     
-                    if archives:
-                        for archive in archives:
-                            practices.append({
-                                "id": f"{profile_id}-{archive.id}",
-                                "type": "archive",
-                                "profile_id": profile_id,
-                                "archive_id": archive.id,
-                                "title": archive.code,
-                                "subtitle": archive.date,
-                                "category": profile_info['name'],
-                                "icon": profile_info['icon'],
-                                "color": profile_info['color']
-                            })
-                    else:
+                    if not already_added:
                         archives_count = db.query(model).count()
                         practices.append({
                             "id": profile_id,
@@ -399,7 +409,7 @@ def search(request: Request, q: str, db: Session = Depends(get_db)):
                 except Exception:
                     continue
         
-        practices = practices[:8]
+        practices = practices[:10]
         
         return {
             "questions": all_questions,
@@ -410,7 +420,6 @@ def search(request: Request, q: str, db: Session = Depends(get_db)):
         raise
     except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")
-
 
 @app.get("/api/practice/profiles")
 @limiter.limit("30/minute")
