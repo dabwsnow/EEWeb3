@@ -11,6 +11,8 @@ import json
 from database import get_db, Base, engine
 import models, schemas
 
+load_dotenv()
+
 Base.metadata.create_all(bind=engine)
 
 with open("config.json", "r", encoding="utf-8") as f:
@@ -21,9 +23,11 @@ app = FastAPI(title="WEB3Informatyk API", version="1.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://web-3-informatyk.vercel.app"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
