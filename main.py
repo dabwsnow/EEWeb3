@@ -5,10 +5,11 @@ from sqlalchemy import or_
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from pathlib import Path
+from dotenv import load_dotenv 
+import os 
 import random
 import json
-import os
+from pathlib import Path
 
 from database import get_db, Base, engine
 import models, schemas
@@ -17,19 +18,31 @@ load_dotenv()
 
 Base.metadata.create_all(bind=engine)
 
-with open("config.json", "r", encoding="utf-8") as f:
-    CONFIG = json.load(f)
+CONFIG = {}
+config_path = Path("config.json")
+if config_path.exists():
+    with open(config_path, "r", encoding="utf-8") as f:
+        CONFIG = json.load(f)
+else:
+    print("⚠️ Warning: config.json not found, using empty config")
+    CONFIG = {
+        "categories_info": [],
+        "test_configs": {},
+        "practice_profiles_info": {}
+    }
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 app = FastAPI(title="WEB3Informatyk API", version="1.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-FRONTEND_URL = os.getenv("FRONTEND_URL")
+FRONTEND_URLS = os.getenv("FRONTEND_URL").split(",")
+
+FRONTEND_URLS = [url.strip() for url in FRONTEND_URLS]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=FRONTEND_URLS, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
